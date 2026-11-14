@@ -1183,6 +1183,7 @@ func _terrain(api, host) -> void:
 		for x in 4:
 			img.set_pixel(x, y, Color(float(x), 0, 0))
 	t.set_heights(img, Vector2(-8, -8), 4.0)
+	check(GroundHeight.owner == "test-addon", "terrain: the add-on owns the field, so the built-in cliff plateaus leave it: %s" % [GroundHeight.owner])
 	check(t.is_on() and t.area() == Rect2(-8, -8, 16, 16), "terrain: a 4 x 4 field of 4-tile texels covers 16 x 16 tiles: %s" % [t.area()])
 	var late := MeshInstance3D.new()
 	add_child(late)
@@ -1197,7 +1198,7 @@ func _terrain(api, host) -> void:
 	other.clear()
 	check(t.is_on(), "terrain: another add-on's clear leaves this one's field")
 	t.clear()
-	check(not t.is_on() and t.height_at(0, 0) == 0.0, "terrain: cleared")
+	check(not t.is_on() and t.height_at(0, 0) == 0.0 and GroundHeight.owner == "", "terrain: cleared")
 	check(early.extra_cull_margin == 0.0 and late.extra_cull_margin == 0.0 and quad.extra_cull_margin == 16384.0, "terrain: flat again, the margins go")
 	early.queue_free()
 	late.queue_free()
@@ -1251,9 +1252,62 @@ func _terrain(api, host) -> void:
 	world2.entities_changed.emit(Vector2i(2, 2))
 	var next_game: Array = t.take_changed_chunks()
 	check(next_game == [Vector2i(2, 2)], "terrain: the next game's changed chunks are heard: %s" % [next_game])
+	_cliff_plateaus()
 	(host.main as FakeMain).world = null
 	world2.queue_free()
 	world.queue_free()
+
+
+## The built-in cliff shelf (cliff_terraces.gd): the mock server's plus-shaped plateau is high inside
+## and flat outside, a free chain is high only on its high side and ramps down past its ends, and a
+## texel of the grid matches the point sample (the worker fills the grid the same way).
+func _cliff_plateaus() -> void:
+	var T = load("res://scripts/world/cliff_terraces.gd")
+	var high := {}
+	for y in range(3, 8):
+		high[Vector2i(-4, y)] = true
+	for x in range(-6, -1):
+		high[Vector2i(x, 5)] = true
+	var cases := {
+		"1100": "west-to-east", "0011": "east-to-west", "0101": "north-to-south", "1010": "south-to-north",
+		"1000": "west-to-north", "0100": "north-to-east", "0001": "east-to-south", "0010": "south-to-west",
+		"1110": "west-to-south", "0111": "north-to-west", "1011": "east-to-north", "1101": "south-to-east",
+	}
+	var segments: Array = []
+	for i in range(-8, 1):
+		for j in range(1, 10):
+			var key := "%d%d%d%d" % [
+				1 if high.has(Vector2i(i - 1, j - 1)) else 0, 1 if high.has(Vector2i(i, j - 1)) else 0,
+				1 if high.has(Vector2i(i - 1, j)) else 0, 1 if high.has(Vector2i(i, j)) else 0]
+			if not cases.has(key):
+				continue
+			segments.append(T.segment(Vector2(4 * i + 2, 4 * j + 2.5), cases[key]))
+	for end in [[-7, "none-to-east"], [-6, "west-to-east"], [-5, "west-to-none"]]:
+		segments.append(T.segment(Vector2(4 * int(end[0]) + 2, 4 * 11 + 2.5), str(end[1])))
+	var open: Dictionary = T.free_ends(segments)
+	check(open.size() == 4, "plateau: the plus has a gap and the free chain has two ends: %d" % open.size())
+	var at := func(x: float, y: float) -> float: return T.sample(Vector2(x, y), segments, open)
+	check(at.call(-12.0, 24.5) > 1.5 and at.call(-18.0, 24.5) > 1.5 and at.call(-12.0, 18.0) > 1.5 and at.call(-12.0, 30.0) > 1.5,
+		"plateau: the plus is high along both arms: %.2f %.2f" % [at.call(-12.0, 24.5), at.call(-18.0, 24.5)])
+	check(at.call(2.0, 36.0) < 0.05 and at.call(-28.0, 12.0) < 0.05 and at.call(-18.0, 29.0) < 0.05,
+		"plateau: outside the plus the ground stays flat: %.2f %.2f %.2f" % [at.call(2.0, 36.0), at.call(-28.0, 12.0), at.call(-18.0, 29.0)])
+	check(at.call(-22.0, 40.0) > 1.2 and at.call(-22.0, 52.0) < 0.05 and at.call(-2.0, 42.0) < 0.05,
+		"plateau: a free cliff is high on its left and ramps down past the end: %.2f %.2f %.2f" % [at.call(-22.0, 40.0), at.call(-22.0, 52.0), at.call(-2.0, 42.0)])
+	var origin := Vector2(-80, -40)
+	var g: PackedFloat32Array = T.grid(segments, open, origin, 80, 2.0)
+	var i := 34
+	var j := 32
+	var p := origin + Vector2(i + 0.5, j + 0.5) * 2.0
+	check(is_equal_approx(g[j * 80 + i], T.sample(p, segments, open)),
+		"plateau: the grid the worker fills matches the point sample at %s: %.3f vs %.3f" % [p, g[j * 80 + i], T.sample(p, segments, open)])
+	# The plus covers tile (-12, 24), chunk (-1, 0). Water there must pull that texel back to 0.
+	var row := PackedByteArray()
+	row.resize(32 * 32)
+	row[24 * 32 + 20] = 1
+	var wet := {Vector2i(-1, 0): row}
+	var flooded: PackedFloat32Array = T.grid(segments, open, origin, 80, 2.0, wet)
+	check(g[j * 80 + i] > 0.5 and flooded[j * 80 + i] == 0.0,
+		"plateau: water on the high side is pulled back to sea level: %.2f -> %.2f" % [g[j * 80 + i], flooded[j * 80 + i]])
 
 
 func _event(code: Key, shift := false) -> InputEventKey:

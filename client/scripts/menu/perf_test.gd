@@ -141,6 +141,7 @@ static func child_settings(look: String, preset: String, factorio_exe: String) -
 	var graphics := {"window_mode": "borderless", "resolution": "", "screen": -1, "vsync": false, "fps_cap": 0, "render_scale": 1.0,
 		"antialiasing": "fxaa", "look": "factorio", "look_before": "factorio", "hold_ups": false, "render_thread": false,
 		"merged_materials": false, "merge_far": true, "decoratives": true, "effects": true, "item_icons": true,
+		"cliff_plateaus": false,
 		"item_models_max": 20500, "belt_smooth": true}
 	graphics.merge(PRESETS.get(preset, PRESETS["high"]), true)
 	return {
