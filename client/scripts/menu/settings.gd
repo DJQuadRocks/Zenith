@@ -62,6 +62,9 @@ const DEFAULTS := {
 		# The dark rim on the ground round each building's foot that Factorio's sprites have
 		# (contact_shade.gd): one MultiMesh per chunk, on in every preset.
 		"contact_shading": true,
+		# The high side of a cliff raised into a shelf (cliff_terraces.gd). Drawn only; a hills
+		# add-on's own field replaces it. Off: cliffs stay ridges on flat ground.
+		"cliff_plateaus": true,
 		# Godot's renderer on a thread of its own (faster on busy bases); off: the main thread, as
 		# before. Read at start-up from ENGINE_OVERRIDES, so it applies after a restart.
 		"render_thread": false,  # Godot calls it experimental; no gain measured, rare hangs on quitting

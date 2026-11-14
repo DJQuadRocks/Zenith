@@ -14,6 +14,7 @@ const ModelLods := preload("res://scripts/world/model_lods.gd")
 const FarChunks := preload("res://scripts/world/far_chunks.gd")
 const FrameBudget := preload("res://scripts/world/frame_budget.gd")
 const BeltBlur := preload("res://scripts/world/belt_blur.gd")
+const CliffTerraces := preload("res://scripts/world/cliff_terraces.gd")
 
 const CHUNK := 32
 const SUBSCRIBE_REFRESH := 5.0  # resend the subscription now and then in case it was lost
@@ -94,6 +95,8 @@ class Rec:
 
 
 var protos := ProtoDB.new()
+## Cliff plateaus (drawn only). Null until the first tick, so a world freed before _ready is quiet.
+var _cliff_terraces: CliffTerraces
 ## Chunks loaded around the focus, as a radius in chunks (3 -> 7x7 chunks).
 var view_radius := 5
 ## Live updates (movers, machine states) are requested within this many tiles of the focus.
@@ -258,6 +261,8 @@ func reset(keep_protos := false, next_surface := -1) -> void:
 	# Every chunk drawn with the old surface's ground is gone: room for the new one's.
 	TerrainTextures.trim(next_surface)
 	_last_focus_sent = Vector2(INF, INF)
+	if _cliff_terraces != null:
+		_cliff_terraces.reset()
 
 
 func set_focus(pos: Vector2) -> void:
@@ -1038,6 +1043,9 @@ func _process(delta: float) -> void:
 		FrameBudget.waiting(&"pick", 0)
 	if not Bridge.world_ready:
 		return
+	if _cliff_terraces == null:
+		_cliff_terraces = CliffTerraces.new()
+	_cliff_terraces.tick(self, delta)
 	var t0 := Time.get_ticks_usec()
 	_update_subscription(delta)
 	_prof("subscribe", t0)
@@ -2397,6 +2405,8 @@ func _finish_terrain_jobs() -> void:
 
 
 func _exit_tree() -> void:
+	if _cliff_terraces != null:
+		_cliff_terraces.shutdown()
 	for entry in _terrain_jobs.values():
 		WorkerThreadPool.wait_for_task_completion(entry[0])
 	_terrain_jobs.clear()

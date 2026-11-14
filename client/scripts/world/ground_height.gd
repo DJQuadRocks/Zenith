@@ -47,13 +47,16 @@ static var _on_added := Callable()
 static var _tasks: Array = []
 static var _field := 0  # numbers the fields set, so an older field's measuring is only tidied up
 static var _polling := false
+## Who set the field now: an add-on's id, "cliffs" for the built-in plateaus (cliff_terraces.gd),
+## or "" while flat. The plateaus leave an add-on's field alone.
+static var owner := ""
 
 
 ## Sets the field: `heights` an Image of FORMAT_RF (heights in tiles) or FORMAT_RGF (red the
 ## ground, green the ground without its cliffs' terraces: what cliff models sit on), its first
 ## texel's corner at `origin` (world x, z), `tiles_per_texel` tiles a texel. Replaces any field
-## before it.
-static func set_field(heights: Image, origin: Vector2, tiles_per_texel: float) -> void:
+## before it. `owner_id` is kept so the built-in cliff plateaus don't write over an add-on's field.
+static func set_field(heights: Image, origin: Vector2, tiles_per_texel: float, owner_id := "") -> void:
 	if heights == null or heights.is_empty():
 		clear()
 		return
@@ -75,12 +78,14 @@ static func set_field(heights: Image, origin: Vector2, tiles_per_texel: float) -
 	RenderingServer.global_shader_parameter_set(GLOBAL_TEX, _texture)
 	RenderingServer.global_shader_parameter_set(GLOBAL_RECT, Vector4(_origin.x, _origin.y, _step, 1.0 if low_ground else 0.0))
 	RenderingServer.global_shader_parameter_set(GLOBAL_ON, 1.0)
+	owner = owner_id
 	_measure(heights)
 
 
 ## Back to flat ground.
 static func clear() -> void:
 	_on = false
+	owner = ""
 	_image = null
 	_field += 1  # a measuring still running is for a field gone
 	RenderingServer.global_shader_parameter_set(GLOBAL_ON, 0.0)

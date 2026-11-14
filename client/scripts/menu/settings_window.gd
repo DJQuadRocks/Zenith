@@ -409,6 +409,8 @@ func _graphics() -> void:
 	_grey_for_look("graphics-ssao", "ssao", "its own Ambient occlusion setting (Add-ons menu) applies")
 	_check(grid, "Contact shading", "graphics", "contact_shading",
 		"dark rim round buildings' feet|The dark rim on the ground round each building's foot that Factorio's sprites have, so buildings stand in the ground rather than on it. One draw per chunk, a fraction of a millisecond.")
+	_check(grid, "Cliff plateaus", "graphics", "cliff_plateaus",
+		"high ground behind cliffs|Raises the ground on a cliff's high side, so the rock reads as the edge of a plateau. Drawn only: Factorio stays flat, and buildings stay on its tiles. A hills add-on replaces this while it is on.")
 	_check(grid, "Render on a separate thread", "graphics", "render_thread",
 		"experimental|Godot's own experimental mode: it may help on some PCs and can hang on quitting. Off is the stable choice. After a restart.")
 

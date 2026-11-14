@@ -14,11 +14,12 @@ Twenty orientations come from five pieces, each turned in quarter turns by the c
     entrance  none to east: the cliff starts in the middle of the cell
 
 Every piece has the same cross-section where it meets the edge of its cell, so any chain joins
-up. The ground stays flat in the client, so a cliff is a ridge: a steep face of tall, broken,
-column-like blocks (the Nauvis sprites' look; Vulcanus, Gleba and Fulgora have flat layered
-slabs instead), a crest with loose boulders, and a slope back down on the high side. Sizes
-come from the HR sprites: the tallest blocks stand about 2.6 tiles high and the whole cliff is about
-3.3 tiles across.
+up. The mesh is a ridge: a steep face of tall, broken, column-like blocks (the Nauvis sprites'
+look; Vulcanus, Gleba and Fulgora have flat layered slabs instead), a crest with loose boulders,
+and a slope back down on the high side. The client raises that high side into a plateau
+(scripts/world/cliff_terraces.gd) and sits the rock on the low ground, so the back slope ends up
+under the shelf and the face is the drop. Sizes come from the HR sprites: the tallest blocks stand
+about 2.6 tiles high and the whole cliff is about 3.3 tiles across.
 """
 
 import math

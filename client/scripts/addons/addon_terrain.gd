@@ -18,12 +18,13 @@ func _init(host, api) -> void:
 	_api = api
 
 
-## Sets the heights: `heights` an Image (FORMAT_RF, heights in tiles; other formats are converted,
-## their red channel read), its first texel's corner at world `origin` (x east, z south), each
-## texel `tiles_per_texel` tiles square. Between texel centres the height is bilinear, outside
-## the image it is 0: fade the edges to 0 yourself. Main thread only.
+## Sets the heights: `heights` an Image (FORMAT_RF, heights in tiles, or FORMAT_RGF with green the
+## ground without cliff terraces), its first texel's corner at world `origin` (x east, z south),
+## each texel `tiles_per_texel` tiles square. Between texel centres the height is bilinear, outside
+## the image it is 0: fade the edges to 0 yourself. Main thread only. Replaces the client's own
+## cliff plateaus while it stands; clearing this field brings them back.
 func set_heights(heights: Image, origin: Vector2, tiles_per_texel: float) -> void:
-	GroundHeight.set_field(heights, origin, tiles_per_texel)
+	GroundHeight.set_field(heights, origin, tiles_per_texel, str(_api.id))
 	_host.set("_terrain_owner", _api.id)
 
 
